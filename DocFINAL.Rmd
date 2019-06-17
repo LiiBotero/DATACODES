@@ -1,0 +1,155 @@
+---
+title: "UniSabana_Proyect"
+subtitle: "Leuconostoc"
+author: "LinaBotero"
+date: "15/6/2019"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    theme: cosmo
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Course Data Carpentry Genomics
+
+This file contains the commands and the steps used for sequencing data of Leuconostoc sp. The reference genome used was obtained in NCBI with the bumber of bioproject: PRJNA315 <https://www.ncbi.nlm.nih.gov/bioproject/PRJNA315>
+
+###RAW DATA. 
+1. M011_S20_R1_001.fastq.gz, M011_S20_R2_001.fastq.gz
+
+####command line
+>bash ~/proyecto/proyecto_script.sh \
+>nano ~/proyecto/proyecto_script.sh \
+>gunzip ~/proyecto/leugenome/M011_S20_R1_001.fastq.gz \
+>gunzip ~/proyecto/leugenome/M011_S20_R2_001.fastq.gz \
+>~/proyecto/leugenome/  \
+>head M011_S20_R1_001.fastq  \
+>mkdir -p ~/proyecto/leugenome/untrimmed_fastq/ \
+>cd -p ~/proyecto/leugenome/untrimmed_fastq/  \
+>ls \
+>untrimmed_fastq/ cd \
+
+####View sequence quality
+>fastqc *.fastq* \
+>ls \
+>mkdir -p ~/proyecto/results/fastqc_untrimmed_reads \
+>mv *.zip ~/proyecto/results/fastqc_untrimmed_reads \
+>mv *.html ~/proyecto/results/fastqc_untrimmed_reads \
+>unzip *.zip \
+  
+####Trimming raw data /Bash command line
+>nano ~/proyecto/leugenome/trim1.sh \
+  
+> #!usr/bin/env bash\
+> code \
+>for file in *_R1_001.fastq.gz  \
+> do \
+> base=$(basename ${file} _R1_001.fastq.gz) \
+>  trimmomatic PE ${file} ${base}_R2_001.fastq.gz \
+>                ${base}_R1_001.trim.fastq.gz ${base}_R1_001.untrim.fastq.gz \
+>                ${base}_R2_001.trim.fastq.gz ${base}_R2_001.untrim.fastq.gz \
+>                SLIDINGWINDOW:4:20 \
+> done \
+ 
+>  bash ~/proyecto/leugenome/trim1.sh \
+  
+####Genome (gunziping genome)
+> ~proyecto/ cd \ 
+>   proyecto/ cd \
+>   p-genome/ cd \
+>   gunzip *.gz \
+
+####Bash command line for trimmed data
+>  !usr/bin/env bash \
+>  code for trimmed data \
+  
+>set -e \
+>cd ~/proyecto/leugenome \
+>LG2=~/proyecto/p-genome/GCF_000014445.1_ASM1444v1_genomic.fna \
+>bwa index $LG2 \
+>mkdir -p sam bam bcf vcf \
+>for lq1 in *_R1_001.trim.fastq.gz \
+>  do \
+>  base=$(basename $lq1 _R1_001.trim.fastq.gz)   \
+>    lq1=~/proyecto/leugenome/trimmed/${base}_R1_001.trim.fastq.gz \
+>    lq2=~/proyecto/leugenome/trimmed/${base}_R2_001.trim.fastq.gz \
+>    sam=~/proyecto/leugenome/trimmed/sam/${base}.sam \
+>    bam=~/proyecto/leugenome/trimmed/bam/${base}.bam \
+>    sorted_bam=~/proyecto/leugenome/trimmed/bam/${base}.sorted.bam \
+>    raw_bcf=~/proyecto/leugenome/trimmed/bcf/${base}.bcf \
+>    variants=~/proyecto/leugenome/trimmed/bcf/${base}_variants.vcf \
+>    final_variants=~/proyecto/leugenome/trimmed/vcf/${base}_final_variants.vcf \
+>    bwa mem $LG2 $lq1 $lq2 > $sam \
+>    samtools view -S -b $sam > $bam \
+>    samtools sort -o $sorted_bam $bam \
+>    samtools index $sorted_bam \
+>    bcftools mpileup -O b -o $raw_bcf -f $LG2 $sorted_bam \
+>    bcftools call --ploidy 1 -m -v -o $variants $raw_bcf \
+>    vcfutils.pl varFilter $variants > $final_variants \
+
+>done \
+
+####Aligmment -Bash command
+>!/usr/bin/env bash \
+script using bwa mem to align example trimmed reads to  ref_genome for Leuconostoc\
+
+>bwa mem ~/proyecto/p-genome/GCF_000014445.1_ASM1444v1_genomic.fna \
+>~/proyecto/leugenome/trimmed/M011_S20_R1_001.trim.fastq.gz \
+>~/proyecto/leugenome/trimmed/M011_S20_R2_001.trim.fastq.gz > ~/proyecto/leugenome/M011_S20.sam \
+>done \
+
+####K-mers 
+Using TMUX the test for K-mers was runned with the next bash
+
+>!/usr/bin/env bash \
+
+
+>for k in `seq 9 3 50`; do \
+
+>abyss-pe k=$k name=test$k in='trimmed/M011_S20_R1_001.trim.fastq.gz trimmed/M011_S20_R2_001.trim.fastq.gz' \
+>done \
+
+>head -1 test15-stats > kmerleuconostoc \
+>grep 'scaffolds.fa' test*stats >> kmerleuconostoc \
+```{Kmer Leuconostoc  }
+
+K-mer Table results for Leuconostoc Assembly
+```
+
+
+| names         | n             | n500  | L50 | min    | N75  |N50    | N25  | E.size  | Max   | sum       |
+| ------------- |:-------------:| -----:|----:|-------:|-----:|------:|-----:|--------:|------:|----------:|
+| test15-stats  |82010 | 1 | 1| 511| 511| 511 |511| 511| 511| 511|
+| test18-stats | 4970      |   806 |151| 500| 1985| 3527| 5806| 4317| 16886| 1744194|
+| test21-stats | 2875      |    257 |35|504| 8019| 16330| 30743| 19232| 50524| 1898249|
+| test24-stats      |2469 | 222 |35| 526| 8691| 17093| 30784| 19731|54351| 1909200|
+| test27-stats    | 2269      |   216 |34| 504| 9006| 17243| 30954| 20423| 54357| 1912159|
+| test30-stats | 2119    |  204 | 32| 503| 9964| 19532| 30796| 21597| 56196| 1919303|
+| test33-stats  | 1871 | 209 | 30| 509| 10170| 19672| 32511| 22277|45989 |1925605|
+| test36-stats | 1713      |   202 |29|515|10872|23650|36949|23520|57247|1931188|
+| test39-stats | 1617      |  200 |29|500|11033|20737|36952|23734|57251|1934228|
+| test42-stats      | 1461 | 186 |26| 506| 11645| 25289| 41490| 27239| 75119| 1936518|
+| test45-stats    | 1374      | 187 |27| 502| 12312| 24205| 37157| 27233| 88996| 1942229|
+| test48-stats | 1246      |182 | 29| 505| 12315| 22084| 32444| 25599| 88958| 1941662|
+
+
+## Including Plots
+
+You can also embed plots, for example:
+!["N5O-K"] 
+img1_path <- "~/proyecto/N50-K.png"
+img1 <- readPNG(img1_path, native = TRUE, info = TRUE)
+attr(img1, "info")
+
+
+
+
+ ```
+
+
